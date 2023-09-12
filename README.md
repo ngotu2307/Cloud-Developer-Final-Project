@@ -22,3 +22,11 @@ cd client
 npm install
 npm run start
 ```
+## Screenshots
+
+Client
+![client-getTodos](https://github.com/ngotu2307/Cloud-Developer-Final-Project/assets/9153265/4a366aa8-a163-49e3-8872-5d32fa6e9a9e)
+
+API deploy
+![api-deploys](https://github.com/ngotu2307/Cloud-Developer-Final-Project/assets/9153265/9d94c289-a854-4b0d-bccd-69918c89449d)
+
