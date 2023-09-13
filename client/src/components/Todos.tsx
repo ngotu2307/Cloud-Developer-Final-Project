@@ -11,10 +11,12 @@ import {
   Icon,
   Input,
   Image,
-  Loader
+  Loader,
+  Label,
+  Form, Radio
 } from 'semantic-ui-react'
 
-import { createTodo, deleteTodo, getTodos, patchTodo } from '../api/todos-api'
+import { createTodo, deleteTodo, getTodos, getTodosFilter, getTodosSort, patchTodo } from '../api/todos-api'
 import Auth from '../auth/Auth'
 import { Todo } from '../types/Todo'
 
@@ -26,14 +28,16 @@ interface TodosProps {
 interface TodosState {
   todos: Todo[]
   newTodoName: string
-  loadingTodos: boolean
+  loadingTodos: boolean,
+  sortAsc: number
 }
 
 export class Todos extends React.PureComponent<TodosProps, TodosState> {
   state: TodosState = {
     todos: [],
     newTodoName: '',
-    loadingTodos: true
+    loadingTodos: true,
+    sortAsc: 0
   }
 
   handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,6 +46,60 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
 
   onEditButtonClick = (todoId: string) => {
     this.props.history.push(`/todos/${todoId}/edit`)
+  }
+
+  handleSortAsc = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({ sortAsc: 1, loadingTodos: true })
+    try {
+      const todos = await getTodosSort(this.props.auth.getIdToken(), "createdAt", "asc")
+      this.setState({
+        todos,
+        loadingTodos: false
+      })
+    } catch (e) {
+      alert(`Failed to fetch todos: ${(e as Error).message}`)
+    }
+  }
+
+  handleSortDesc = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({ sortAsc: 2, loadingTodos: true })
+    try {
+      const todos = await getTodosSort(this.props.auth.getIdToken(), "createdAt", "desc")
+      this.setState({
+        todos,
+        loadingTodos: false
+      })
+    } catch (e) {
+      alert(`Failed to fetch todos: ${(e as Error).message}`)
+    }
+  }
+
+  handleDoneClick = async () => {
+    console.log("Done click!")
+    this.setState({ sortAsc: 0, loadingTodos: true })
+    try {
+      const todos = await getTodosFilter(this.props.auth.getIdToken(), "done")
+      this.setState({
+        todos,
+        loadingTodos: false
+      })
+    } catch (e) {
+      alert(`Failed to fetch todos: ${(e as Error).message}`)
+    }
+  }
+
+  handleNotDoneClick = async () => {
+    console.log("Not Done click!")
+    this.setState({ sortAsc: 0, loadingTodos: true })
+    try {
+      const todos = await getTodosFilter(this.props.auth.getIdToken(), "not")
+      this.setState({
+        todos,
+        loadingTodos: false
+      })
+    } catch (e) {
+      alert(`Failed to fetch todos: ${(e as Error).message}`)
+    }
   }
 
   onTodoCreate = async (event: React.ChangeEvent<HTMLButtonElement>) => {
@@ -131,6 +189,50 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
             onChange={this.handleNameChange}
           />
         </Grid.Column>
+
+        <Grid.Column width={16}>
+          <br />
+          <Header size='small'>Sort by: CreatedAt</Header>
+          <form>
+            <div className="radio">
+              <label>
+                <input
+                  type="radio"
+                  value="Default"
+                  checked={this.state.sortAsc === 0}
+                />
+                Default
+              </label>
+            </div>
+            <div className="radio">
+              <label>
+                <input
+                  type="radio"
+                  value="Asc"
+                  checked={this.state.sortAsc === 1}
+                  onChange={this.handleSortAsc}
+                />
+                Asc
+              </label>
+            </div>
+            <div className="radio">
+              <label>
+                <input
+                  type="radio"
+                  value="Desc"
+                  checked={this.state.sortAsc === 2}
+                  onChange={this.handleSortDesc}
+                />
+                Desc
+              </label>
+            </div>
+          </form>
+          
+          <Header size='small'>Filter</Header>
+          <Button primary onClick={this.handleDoneClick}>Done</Button>
+          <Button secondary onClick={this.handleNotDoneClick}>Not Done</Button>
+        </Grid.Column>
+
         <Grid.Column width={16}>
           <Divider />
         </Grid.Column>
@@ -165,11 +267,14 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
               <Grid.Column width={1} verticalAlign="middle">
                 <Checkbox
                   onChange={() => this.onTodoCheck(pos)}
-                  checked={todo.done}
+                  checked={todo.done == 1 ? true : false}
                 />
               </Grid.Column>
-              <Grid.Column width={10} verticalAlign="middle">
+              <Grid.Column width={6} verticalAlign="middle">
                 {todo.name}
+              </Grid.Column>
+              <Grid.Column width={4} verticalAlign="middle">
+                {todo.createdAt}
               </Grid.Column>
               <Grid.Column width={3} floated="right">
                 {todo.dueDate}
