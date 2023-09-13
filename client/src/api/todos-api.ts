@@ -17,6 +17,32 @@ export async function getTodos(idToken: string): Promise<Todo[]> {
   return response.data.items
 }
 
+export async function getTodosFilter(idToken: string, filter: string): Promise<Todo[]> {
+  console.log('Fetching todos filter')
+
+  const response = await Axios.get(`${apiEndpoint}/todos?filter=${filter}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+  })
+  console.log('Todos filter:', response.data)
+  return response.data.items
+}
+
+export async function getTodosSort(idToken: string, sortByValue: string, sortOrderValue: string): Promise<Todo[]> {
+  console.log('Fetching todos filter')
+
+  const response = await Axios.get(`${apiEndpoint}/todos?sortBy=${sortByValue}&sortOrder=${sortOrderValue}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+  })
+  console.log('Todos sort:', response.data)
+  return response.data.items
+}
+
 export async function createTodo(
   idToken: string,
   newTodo: CreateTodoRequest

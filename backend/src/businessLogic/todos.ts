@@ -15,8 +15,54 @@ export async function getTodosByUserId(
     userId: string
 ): Promise<TodoItem[]> {
     logger.info(`Get all todos user ${userId}`)
-
     return todosAccess.getTodosByUserId(userId)
+}
+
+export async function getTodosByUserIdSort(
+    userId: string,
+    sortBy: string,
+    sortOrder: string
+): Promise<TodoItem[]> {
+    logger.info(`Get all todos user ${userId}, sortby ${sortBy}, order ${sortOrder}`)
+    if (!isValidSortByParameter(sortBy) && !isValidSortOrderParameter(sortOrder)) {
+        throw new Error('Sort invalid!')
+    }
+    let isAsc : boolean = false
+    switch (sortOrder) {
+        case 'asc':
+            isAsc = true
+            break;
+        case 'desc':
+            isAsc = false
+            break;
+    }
+
+    return todosAccess.getTodosByUserIdSort(userId, sortBy, isAsc)
+}
+
+export async function getTodosByUserFilter(
+    userId: string,
+    filter: string,
+): Promise<TodoItem[]> {
+    logger.info(`Get all todos user ${userId}, filter ${filter}`)
+    if (!isValidFilterParameter(filter)) {
+        throw new Error('Filter invalid!')
+    }
+    return todosAccess.getTodosByUserFilter(userId, filter)
+}
+
+function isValidFilterParameter(filter: string) {
+    const filterValues = ['done', 'not'];
+    return filterValues.includes(filter);
+}
+
+function isValidSortByParameter(sortBy: string) {
+    const sortByValues = ['createdAt'];
+    return sortByValues.includes(sortBy);
+}
+
+function isValidSortOrderParameter(sortOrder: string) {
+    return ['asc', 'desc'].includes(sortOrder);
 }
 
 export async function createTodo(
@@ -29,7 +75,7 @@ export async function createTodo(
         userId,
         todoId,
         createdAt: new Date().toISOString(),
-        done: false,
+        done: 0,
         attachmentUrl: null,
         ...createTodoRequest
     }

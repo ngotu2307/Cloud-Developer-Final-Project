@@ -25,6 +25,7 @@ provider:
     ATTACHMENTS_S3_BUCKET: serverless-tunm-c4-todo-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     TODOS_BY_USER_INDEX: TodosByUserIndex
+    TODOS_BY_DONE_STATUS_INDEX: TodosByDoneStatusIndex
 
   logs:
     # Enable API Gateway logs
@@ -67,6 +68,12 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
+          request:
+            parameters:
+              querystrings:
+                sortBy: false
+                sortOrder: false
+                filter: false
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -76,7 +83,10 @@ functions:
         Action:
           - dynamodb:Query
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_BY_USER_INDEX}
-
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_BY_DONE_STATUS_INDEX}
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
     events:
@@ -185,6 +195,8 @@ resources:
             AttributeType: S
           - AttributeName: createdAt
             AttributeType: S
+          - AttributeName: done
+            AttributeType: N
         KeySchema:
           - AttributeName: todoId
             KeyType: HASH
@@ -196,6 +208,14 @@ resources:
               - AttributeName: userId
                 KeyType: HASH
               - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: ${self:provider.environment.TODOS_BY_DONE_STATUS_INDEX}
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: done
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL

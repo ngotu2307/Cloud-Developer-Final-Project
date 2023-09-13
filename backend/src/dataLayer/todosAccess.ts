@@ -15,15 +15,18 @@ export class TodosAccess {
     private readonly docClient: DocumentClient = new AWS.DynamoDB.DocumentClient(),
     private readonly todosTable = process.env.TODOS_TABLE,
     private readonly bucketName = process.env.ATTACHMENTS_S3_BUCKET,
-    private readonly todoUserIndex = process.env.TODOS_BY_USER_INDEX,
+    private readonly todoByUserIndex = process.env.TODOS_BY_USER_INDEX,
+    private readonly todoByDoneStatusIndex = process.env.TODOS_BY_DONE_STATUS_INDEX,
     private readonly urlExpiration = process.env.SIGNED_URL_EXPIRATION
   ) { }
 
-  async getTodosByUserId(userId: string): Promise<TodoItem[]> {
+  async getTodosByUserId(
+    userId: string
+  ): Promise<TodoItem[]> {
     const result = await this.docClient
       .query({
         TableName: this.todosTable,
-        IndexName: this.todoUserIndex,
+        IndexName: this.todoByUserIndex,
         KeyConditionExpression: 'userId = :userId',
         ExpressionAttributeValues: {
           ':userId': userId
@@ -32,7 +35,68 @@ export class TodosAccess {
       .promise()
 
     const items = result.Items
-    logger.info(`All todos for user ${userId} is ${items}`)
+    logger.info(`No: All todos for user ${userId} is ${items}`)
+
+    return items as TodoItem[]
+  }
+
+  async getTodosByUserIdSort(
+    userId: string,
+    sortBy: string,
+    isAsc: boolean
+  ): Promise<TodoItem[]> {
+    let sortedIndexName: string = ""
+    switch (sortBy) {
+      case 'createdAt':
+        sortedIndexName = this.todoByUserIndex
+        break;
+    }
+    logger.info(`Sort: All todos for user ${userId}, sortBy: ${sortBy}, isAsc: ${isAsc}`)
+    const result = await this.docClient
+      .query({
+        TableName: this.todosTable,
+        IndexName: sortedIndexName,
+        KeyConditionExpression: 'userId = :userId',
+        ExpressionAttributeValues: {
+          ':userId': userId
+        },
+        ScanIndexForward: isAsc
+      })
+      .promise()
+
+    const items = result.Items
+
+    return items as TodoItem[]
+  }
+
+  async getTodosByUserFilter(
+    userId: string,
+    filter: string
+  ): Promise<TodoItem[]> {
+    let isDone: boolean = false
+    switch (filter) {
+      case 'done':
+        isDone = true
+        break;
+      case 'not':
+        isDone = false
+        break;
+    }
+
+    const result = await this.docClient
+      .query({
+        TableName: this.todosTable,
+        IndexName: this.todoByDoneStatusIndex,
+        KeyConditionExpression: 'userId = :userId AND done = :done',
+        ExpressionAttributeValues: {
+          ':userId': userId,
+          ':done': isDone ? 1 : 0
+        }
+      })
+      .promise()
+
+    const items = result.Items
+    logger.info(`Filter: All todos for user ${userId}, filter ${filter} is ${items}`)
 
     return items as TodoItem[]
   }
@@ -85,7 +149,7 @@ export class TodosAccess {
       ExpressionAttributeValues: {
         ":name": updatedTodo.name,
         ":dueDate": updatedTodo.dueDate,
-        ":done": updatedTodo.done,
+        ":done": updatedTodo.done ? 1 : 0,
       },
       ReturnValues: "ALL_NEW"
     }
